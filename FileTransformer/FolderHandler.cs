@@ -6,15 +6,15 @@ using Microsoft.Extensions.Options;
 using System.IO.Abstractions;
 using System.Text;
 
-public class FileHandler : IFileHandler
+public class FolderHandler : IFolderHandler
 {
     private const int MaxFilePathLength = 260;
 
     private readonly ILogger _logger = NullLogger.Instance;
-    private readonly FileReaderOptions _options;
+    private readonly WorkerOptions _options;
     private readonly IFileSystem _fileSystem;
 
-    public FileHandler(IOptions<FileReaderOptions> options, IFileSystem? fileSystem = null, ILogger<FileHandler>? logger = null) : base()
+    public FolderHandler(IOptions<WorkerOptions> options, IFileSystem? fileSystem = null, ILogger<FolderHandler>? logger = null) : base()
     {
         _options = options.Value;
         _fileSystem = fileSystem ?? new FileSystem();
@@ -23,13 +23,13 @@ public class FileHandler : IFileHandler
 
     public IEnumerable<string> GetFilesFromFolder()
     {
-        if (string.IsNullOrWhiteSpace(_options.FilePath))
-            throw new ArgumentNullException(nameof(_options.FilePath));
+        if (string.IsNullOrWhiteSpace(_options.FolderPath))
+            return Enumerable.Empty<string>();
         var extension = ConvertToFileExtensionFilter(_options.Extension);
         var option = _options.SearchAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        return CheckDirectory(_options.FilePath, _options.CreateDirectory) ?
-            _fileSystem.Directory.EnumerateFiles(_options.FilePath, extension, option) :
-            Array.Empty<string>();
+        return CheckDirectory(_options.FolderPath, _options.CreateDirectory) ?
+            _fileSystem.Directory.EnumerateFiles(_options.FolderPath, extension, option) :
+            Enumerable.Empty<string>();
     }
 
     private static string ConvertToFileExtensionFilter(string fileExtension)
@@ -60,7 +60,7 @@ public class FileHandler : IFileHandler
     private bool CheckDirectory(string uncPath, bool createDirectory = false)
     {
         bool exists = _fileSystem.Directory.Exists(uncPath);
-        if (createDirectory)
+        if (!exists && createDirectory)
             CreateDirectory(uncPath);
         else if (!exists)
             _logger.LogWarning("Folder not found: '{0}'.", uncPath);

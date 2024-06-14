@@ -1,6 +1,6 @@
 ﻿namespace FileTransformer;
 
-public interface IFileHandler
+public interface IFolderHandler
 {
     IEnumerable<string> GetFilesFromFolder();
 }

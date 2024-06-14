@@ -1,10 +1,6 @@
-﻿
-namespace FileTransformer
-{
-    internal interface IFileReader
-    {
-        Task<T> DeserializeAsync<T>(string filePath) where T : new();
+﻿namespace FileTransformer;
 
-        Task<string> ReadAllTextAsync(string filePath);
-    }
+public interface IFileReader
+{
+    ValueTask<T> DeserializeAsync<T>(string filePath, CancellationToken cancellationToken = default) where T : new();
 }

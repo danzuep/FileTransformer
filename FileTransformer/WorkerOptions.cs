@@ -1,10 +1,10 @@
 ﻿namespace FileTransformer;
 
-public class FileReaderOptions
+public class WorkerOptions
 {
-    public static readonly string SectionName = "FileReader";
+    public static readonly string SectionName = "Worker";
 
-    public string FilePath { get; set; } = null!;
+    public string FolderPath { get; set; } = null!;
 
     public string Output { get; set; } = null!;
 

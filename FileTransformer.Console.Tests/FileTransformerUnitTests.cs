@@ -1,11 +1,13 @@
+using FileTransformer.Console;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace FileTransformer.Tests
 {
-    public class FileTransformerUnitTests
+    public class FileTransformerUnitTests : IDisposable
     {
         private readonly MockFileSystem _fileSystem;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IHost _host;
 
         /// <summary>
         /// <see href="https://github.com/TestableIO/System.IO.Abstractions#readme"/>
@@ -17,14 +19,14 @@ namespace FileTransformer.Tests
             {
                 { @"C:\Logs\log.txt", new MockFileData(string.Empty) }
             });
-            _serviceProvider = Program.InitialiseServiceProvider("-f", @"C:\Logs\log.txt");
+            _host = Program.CreateConsoleHost("-f", @"C:\Logs\log.txt");
         }
 
         [Fact]
         public void ReadFolder_WithValidContents_ReturnsValidModel()
         {
             // Arrange
-            var fileReader = _serviceProvider.GetRequiredService<IFileHandler>();
+            var fileReader = _host.Services.GetRequiredService<IFolderHandler>();
             // Act
             var outFile = fileReader.GetFilesFromFolder();
             // Assert
@@ -37,12 +39,17 @@ namespace FileTransformer.Tests
         {
             // Arrange
             _fileSystem.AddDirectory($"{folderPathExport}{jsonFolderSuffix}");
-            var fileReader = _serviceProvider.GetRequiredService<IFileReader>();
+            var fileReader = _host.Services.GetRequiredService<IFileReader>();
             // Act
             var outFile = await fileReader.DeserializeAsync<Dictionary<string, string>>(filePath);
             // Assert
             var jsonOutFilePath = $"{_fileSystem.Path.Combine($"{folderPathExport}{jsonFolderSuffix}", _fileSystem.Path.GetFileNameWithoutExtension(filePath))}.json";
             var jsonOutFileData = _fileSystem.GetFile(jsonOutFilePath);
+        }
+
+        public void Dispose()
+        {
+            _host.Dispose();
         }
     }
 }

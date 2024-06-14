@@ -1,54 +1,53 @@
-﻿using Microsoft.Extensions.Logging;
+﻿namespace FileTransformer;
+
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FileTransformer
+public sealed class FileReader : IFileReader
 {
-    internal class FileReader : IFileReader
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
     {
-        private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
-        {
-            Converters = { new JsonStringEnumConverter() }
-        };
+        Converters = { new JsonStringEnumConverter() }
+    };
 
-        private readonly ILogger _logger;
+    private readonly ILogger _logger;
 
-        public FileReader(ILogger<FileReader>? logger = null)
+    public FileReader(ILogger<FileReader>? logger = null)
+    {
+        _logger = logger ?? NullLogger<FileReader>.Instance;
+    }
+
+    private async ValueTask<T?> ProcessAsync<T>(string filePath, Func<Stream, ValueTask<T>> task)
+    {
+        T? fileContent = default;
+        try
         {
-            _logger = logger ?? NullLogger<FileReader>.Instance;
+            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            fileContent = await task(fileStream).ConfigureAwait(false);
         }
-
-        private async Task<T?> ProcessAsync<T>(string filePath, Func<Stream, ValueTask<T>> task)
+        catch (Exception ex)
         {
-            T? fileContent = default;
-            try
-            {
-                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                fileContent = await task(fileStream);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, $"Failed to read file: \"{filePath}\"");
-            }
-            return fileContent;
+            _logger.LogWarning(ex, "Failed to read file: \"{0}\"", filePath);
         }
+        return fileContent;
+    }
 
-        public async Task<T> DeserializeAsync<T>(string filePath) where T : new()
-        {
-            var fileContent = await ProcessAsync(filePath, (stream) =>
-                JsonSerializer.DeserializeAsync<T>(stream, _jsonSerializerOptions));
-            return fileContent ?? new();
-        }
+    public async ValueTask<T> DeserializeAsync<T>(string filePath, CancellationToken cancellationToken = default) where T : new()
+    {
+        var fileContent = await ProcessAsync(filePath, (stream) =>
+            JsonSerializer.DeserializeAsync<T>(stream, _jsonSerializerOptions, cancellationToken));
+        return fileContent ?? new();
+    }
 
-        public async Task<string> ReadAllTextAsync(string filePath)
+    public async Task<string> ReadAllTextAsync(string filePath, CancellationToken cancellationToken = default)
+    {
+        var fileContent = await ProcessAsync(filePath, async (stream) =>
         {
-            var fileContent = await ProcessAsync(filePath, async (stream) =>
-            {
-                using var reader = new StreamReader(stream);
-                return await reader.ReadToEndAsync();
-            });
-            return fileContent ?? string.Empty;
-        }
+            using var reader = new StreamReader(stream);
+            return await reader.ReadToEndAsync(cancellationToken);
+        });
+        return fileContent ?? string.Empty;
     }
 }
