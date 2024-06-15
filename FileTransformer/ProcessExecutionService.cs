@@ -26,7 +26,7 @@ public sealed class ProcessExecutionService : IProcessExecutionService
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogTrace("Worker cancelled");
+                    _logger.LogTrace("Folder handler cancelled");
                     break;
                 }
                 tasks.Add(ExecuteAsync(filePath, cancellationToken));
@@ -47,8 +47,20 @@ public sealed class ProcessExecutionService : IProcessExecutionService
     {
         try
         {
-            var content = await _fileReader.DeserializeAsync<WorkerOptions>(filePath, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("File deserialized: \"{0}\"", filePath);
+            _logger.LogDebug("Deserializing file: \"{0}\"", filePath);
+            var content = await _fileReader.DeserializeAsync<Dictionary<string, string>>(filePath, cancellationToken).ConfigureAwait(false);
+            if (content != null)
+            {
+                foreach (var pair in content)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogTrace("File deserializer cancelled while processing file: \"{0}\"", filePath);
+                        break;
+                    }
+                    _logger.LogTrace("{0}", pair);
+                }
+            }
         }
         catch (OperationCanceledException) // includes TaskCanceledException
         {

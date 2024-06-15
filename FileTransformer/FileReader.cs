@@ -2,6 +2,7 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.IO.Abstractions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,11 +12,12 @@ public sealed class FileReader : IFileReader
     {
         Converters = { new JsonStringEnumConverter() }
     };
-
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
-    public FileReader(ILogger<FileReader>? logger = null)
+    public FileReader(IFileSystem? fileSystem = null, ILogger<FileReader>? logger = null)
     {
+        _fileSystem = fileSystem ?? new FileSystem();
         _logger = logger ?? NullLogger<FileReader>.Instance;
     }
 
@@ -24,7 +26,7 @@ public sealed class FileReader : IFileReader
         T? fileContent = default;
         try
         {
-            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var fileStream = _fileSystem.FileStream.New(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             fileContent = await task(fileStream).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -34,11 +36,11 @@ public sealed class FileReader : IFileReader
         return fileContent;
     }
 
-    public async ValueTask<T> DeserializeAsync<T>(string filePath, CancellationToken cancellationToken = default) where T : new()
+    public async ValueTask<T?> DeserializeAsync<T>(string filePath, CancellationToken cancellationToken = default)
     {
         var fileContent = await ProcessAsync(filePath, (stream) =>
             JsonSerializer.DeserializeAsync<T>(stream, _jsonSerializerOptions, cancellationToken));
-        return fileContent ?? new();
+        return fileContent;
     }
 
     public async Task<string> ReadAllTextAsync(string filePath, CancellationToken cancellationToken = default)

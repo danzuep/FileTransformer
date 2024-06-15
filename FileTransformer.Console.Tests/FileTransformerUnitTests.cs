@@ -1,11 +1,17 @@
-using FileTransformer.Console;
+using System.IO.Abstractions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace FileTransformer.Tests
 {
     public class FileTransformerUnitTests : IDisposable
     {
+        private static readonly string _folder = @"C:\Logs";
+        private static readonly string _filePath = $"{_folder}\\log.txt";
+        private static readonly string _fileContent = """{"key":"value"}""";
+
         private readonly MockFileSystem _fileSystem;
         private readonly IHost _host;
 
@@ -17,34 +23,103 @@ namespace FileTransformer.Tests
             // Arrange
             _fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
-                { @"C:\Logs\log.txt", new MockFileData(string.Empty) }
+                { _filePath, new MockFileData(_fileContent) }
             });
-            _host = Program.CreateConsoleHost("-f", @"C:\Logs\log.txt");
+            _host = CreateTestHost("-f", _folder);
+        }
+
+        private IHost CreateTestHost(params string[] args)
+        {
+            return Host.CreateDefaultBuilder()
+                .ConfigureServices(InitialiseServices)
+                .ConfigureAppConfiguration(InitialiseConfiguration)
+                .Build();
+
+            void InitialiseConfiguration(IConfigurationBuilder builder) =>
+                builder.AddCommandLineSwitchMappings((builder, switchMappings) =>
+                    builder.AddCommandLine(args, switchMappings), args);
+
+            void InitialiseServices(HostBuilderContext context, IServiceCollection services)
+            {
+                services.Configure<WorkerOptions>(context.Configuration);
+                services.AddSingleton<IFileSystem>(_fileSystem);
+                services.AddTransient<FileWriter>();
+                services.AddFileTransformerServices(args);
+            }
         }
 
         [Fact]
-        public void ReadFolder_WithValidContents_ReturnsValidModel()
+        public void GetFilesFromFolder_WithOneArgument_ReturnsValidModel()
         {
             // Arrange
-            var fileReader = _host.Services.GetRequiredService<IFolderHandler>();
+            var host = CreateTestHost(_folder);
+            var folderHandler = host.Services.GetRequiredService<IFolderHandler>();
             // Act
-            var outFile = fileReader.GetFilesFromFolder();
+            var filePaths = folderHandler.GetFilesFromFolder();
             // Assert
-            Assert.NotNull(outFile);
+            Assert.True(filePaths?.Count() > 0);
+            Assert.Equal(_filePath, filePaths.First());
+        }
+
+        [Fact]
+        public void GetFilesFromFolder_ReturnsValidModel()
+        {
+            // Arrange
+            var folderHandler = _host.Services.GetRequiredService<IFolderHandler>();
+            // Act
+            var filePaths = folderHandler.GetFilesFromFolder();
+            // Assert
+            Assert.True(filePaths?.Count() > 0);
+            Assert.Equal(_filePath, filePaths.First());
         }
 
         [Theory]
-        [InlineData(@"C:\Logs\log.txt", @"C:\Logs", "", "")]
-        public async Task ReadFile_WithValidContents_ReturnsValidModelAsync(string filePath, string folderPathExport, string jsonFolderSuffix, string expected)
+        [InlineData("export.json")]
+        public void GetFilesFromFolder_WithNewFile_ReturnsValidModel(string newFileName)
         {
             // Arrange
-            _fileSystem.AddDirectory($"{folderPathExport}{jsonFolderSuffix}");
-            var fileReader = _host.Services.GetRequiredService<IFileReader>();
+            var newFilePath = _fileSystem.Path.Combine(_folder, newFileName);
+            _fileSystem.AddFile(newFilePath, new MockFileData(_fileContent));
+            var options = Options.Create(new WorkerOptions() { FolderPath = _folder} );
+            var folderHandler = new FolderHandler(options, _fileSystem);
             // Act
-            var outFile = await fileReader.DeserializeAsync<Dictionary<string, string>>(filePath);
+            var filePaths = folderHandler.GetFilesFromFolder();
             // Assert
-            var jsonOutFilePath = $"{_fileSystem.Path.Combine($"{folderPathExport}{jsonFolderSuffix}", _fileSystem.Path.GetFileNameWithoutExtension(filePath))}.json";
-            var jsonOutFileData = _fileSystem.GetFile(jsonOutFilePath);
+            Assert.Contains(newFilePath, filePaths);
+        }
+
+        [Fact]
+        public async Task ReadAllTextAsync_WithValidContents_ReturnsValidModel()
+        {
+            // Arrange
+            var fileReader = new FileReader(_fileSystem);
+            // Act
+            var fileContent = await fileReader.ReadAllTextAsync(_filePath, CancellationToken.None);
+            // Assert
+            Assert.Equal(_fileContent, fileContent);
+        }
+
+        [Fact]
+        public async Task DeserializeAsync_WithValidContents_ReturnsValidModel()
+        {
+            // Arrange
+            var fileReader = _host.Services.GetRequiredService<IFileReader>();
+            var fileWriter = _host.Services.GetRequiredService<FileWriter>();
+            // Act
+            var fileContents = await fileReader.DeserializeAsync<Dictionary<string, string>>(_filePath, CancellationToken.None);
+            var fileContent = fileWriter.Serialize(fileContents);
+            // Assert
+            Assert.NotNull(fileContent);
+            Assert.Equal(_fileContent, fileContent);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_WithValidContents_ReturnsValidModel()
+        {
+            // Arrange
+            var service = _host.Services.GetRequiredService<IProcessExecutionService>();
+            // Act
+            await service.ExecuteAsync(CancellationToken.None);
         }
 
         public void Dispose()

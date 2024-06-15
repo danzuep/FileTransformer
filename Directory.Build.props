@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Daniel Collingwood</Authors>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageDescription>This package applies simple "Extract Transform Load" (ETL) -type steps to files.</PackageDescription>
+    <PackageProjectUrl>https://github.com/danzuep/FileTransformer</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/danzuep/FileTransformer</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+  </PropertyGroup>
+
+  <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+    <None Include="../LICENSE.txt" LinkBase="Solution Items" Pack="true" />
+    <None Include="../README.md" LinkBase="Solution Items" Pack="true" />
+    <None Include="../*" LinkBase="Solution Items" />
+  </ItemGroup>
+
+</Project>

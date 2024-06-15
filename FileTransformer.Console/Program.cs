@@ -1,6 +1,7 @@
 ﻿namespace FileTransformer.Console;
 
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,38 +20,21 @@ public sealed class Program
     {
         return Host.CreateDefaultBuilder()
             .ConfigureLogging(log => log.SetMinimumLevel(LogLevel.Debug))
-            .ConfigureAppConfiguration(InitialiseConfiguration)
             .ConfigureServices(InitialiseServices)
+            .ConfigureAppConfiguration(InitialiseConfiguration)
             .UseConsoleLifetime()
             .Build();
 
-        void InitialiseConfiguration(HostBuilderContext context, IConfigurationBuilder builder)
-        {
-            if (args is { Length: > 1 })
-            {
-                var switchMappings = new Dictionary<string, string>()
-                {
-                    // The file to read from.
-                    { "-f", "FilePath" },
-                    // The file to write to.
-                    { "-o", "Output" }
-                };
-                builder.AddCommandLine(args, switchMappings);
-            }
-        }
+        void InitialiseConfiguration(IConfigurationBuilder builder) =>
+            builder.AddCommandLineSwitchMappings((builder, switchMappings) =>
+                builder.AddCommandLine(args, switchMappings), args);
 
         void InitialiseServices(HostBuilderContext context, IServiceCollection services)
         {
             var config = context.Configuration.GetSection(WorkerOptions.SectionName);
             services.Configure<WorkerOptions>(config);
-            if (args is { Length: 1 })
-            {
-                services.AddOptions<WorkerOptions>()
-                    .Configure(options => options.FolderPath = args[0]);
-            }
-            services.AddTransient<IFolderHandler, FolderHandler>();
-            services.AddTransient<IFileReader, FileReader>();
-            services.AddTransient<IProcessExecutionService, ProcessExecutionService>();
+            services.AddTransient<IFileSystem, FileSystem>();
+            services.AddFileTransformerServices(args);
             services.AddHostedService<Worker>();
         }
     }

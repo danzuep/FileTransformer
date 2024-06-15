@@ -1,6 +1,6 @@
 ﻿namespace FileTransformer;
 
-using System.IO;
+using System.IO.Abstractions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -13,20 +13,24 @@ public sealed class FileWriter
     {
         Converters = { new JsonStringEnumConverter() }
     };
-
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
-    public FileWriter(ILogger<FileWriter>? logger = null)
+    public FileWriter(IFileSystem? fileSystem = null, ILogger<FileWriter>? logger = null)
     {
+        _fileSystem = fileSystem ?? new FileSystem();
         _logger = logger ?? NullLogger<FileWriter>.Instance;
     }
 
-    public async Task ProcessAsync<T>(T fileObject, string filePath, CancellationToken cancellationToken = default)
+    public string Serialize<T>(T fileObject) =>
+        JsonSerializer.Serialize(fileObject, _jsonSerializerOptions);
+
+    public async Task WriteAllTextAsync<T>(T fileObject, string filePath, CancellationToken cancellationToken = default)
     {
         try
         {
-            var json = JsonSerializer.Serialize(fileObject, _jsonSerializerOptions);
-            await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
+            var json = Serialize(fileObject);
+            await _fileSystem.File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

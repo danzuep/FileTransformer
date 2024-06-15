@@ -16,7 +16,7 @@ public class Worker : IHostedService, IDisposable
     private readonly IHostApplicationLifetime? _hostApplicationLifetime;
     private readonly ILogger _logger;
 
-    public Worker(IProcessExecutionService processExecutionService, ILogger<Worker>? logger = null, IHostApplicationLifetime? hostApplicationLifetime = null)
+    public Worker(IProcessExecutionService processExecutionService, IHostApplicationLifetime? hostApplicationLifetime = null, ILogger<Worker>? logger = null)
     {
         _processExecutionService = processExecutionService;
         _hostApplicationLifetime = hostApplicationLifetime;

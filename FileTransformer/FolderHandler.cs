@@ -10,9 +10,9 @@ public class FolderHandler : IFolderHandler
 {
     private const int MaxFilePathLength = 260;
 
-    private readonly ILogger _logger = NullLogger.Instance;
     private readonly WorkerOptions _options;
     private readonly IFileSystem _fileSystem;
+    private readonly ILogger _logger = NullLogger.Instance;
 
     public FolderHandler(IOptions<WorkerOptions> options, IFileSystem? fileSystem = null, ILogger<FolderHandler>? logger = null) : base()
     {
@@ -23,13 +23,13 @@ public class FolderHandler : IFolderHandler
 
     public IEnumerable<string> GetFilesFromFolder()
     {
-        if (string.IsNullOrWhiteSpace(_options.FolderPath))
+        if (string.IsNullOrWhiteSpace(_options.FolderPath) ||
+            !CheckDirectory(_options.FolderPath, _options.CreateDirectory))
             return Enumerable.Empty<string>();
         var extension = ConvertToFileExtensionFilter(_options.Extension);
         var option = _options.SearchAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        return CheckDirectory(_options.FolderPath, _options.CreateDirectory) ?
-            _fileSystem.Directory.EnumerateFiles(_options.FolderPath, extension, option) :
-            Enumerable.Empty<string>();
+        var filePaths = _fileSystem.Directory.EnumerateFiles(_options.FolderPath, extension, option);
+        return filePaths;
     }
 
     private static string ConvertToFileExtensionFilter(string fileExtension)
