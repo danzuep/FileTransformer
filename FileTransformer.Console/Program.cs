@@ -31,8 +31,8 @@ public sealed class Program
 
         void InitialiseServices(HostBuilderContext context, IServiceCollection services)
         {
-            var config = context.Configuration.GetSection(WorkerOptions.SectionName);
-            services.Configure<WorkerOptions>(config);
+            //var configuration = context.Configuration.GetSection(WorkerOptions.SectionName);
+            services.Configure<WorkerOptions>(context.Configuration);
             services.AddTransient<IFileSystem, FileSystem>();
             services.AddFileTransformerServices(args);
             services.AddHostedService<Worker>();

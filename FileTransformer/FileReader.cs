@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 
 public sealed class FileReader : IFileReader
 {
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
+    internal static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
     {
         Converters = { new JsonStringEnumConverter() }
     };
@@ -39,7 +39,7 @@ public sealed class FileReader : IFileReader
     public async ValueTask<T?> DeserializeAsync<T>(string filePath, CancellationToken cancellationToken = default)
     {
         var fileContent = await ProcessAsync(filePath, (stream) =>
-            JsonSerializer.DeserializeAsync<T>(stream, _jsonSerializerOptions, cancellationToken));
+            JsonSerializer.DeserializeAsync<T>(stream, JsonSerializerOptions, cancellationToken));
         return fileContent;
     }
 

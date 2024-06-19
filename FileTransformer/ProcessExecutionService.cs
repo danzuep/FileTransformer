@@ -3,15 +3,18 @@
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 public sealed class ProcessExecutionService : IProcessExecutionService
 {
+    private readonly FolderOptions _options;
     private readonly IFolderHandler _folderHandler;
     private readonly IFileReader _fileReader;
     private readonly ILogger _logger;
 
-    public ProcessExecutionService(IFolderHandler folderHandler, IFileReader fileReader, ILogger<ProcessExecutionService>? logger = null)
+    public ProcessExecutionService(IOptions<FolderOptions> options, IFolderHandler folderHandler, IFileReader fileReader, ILogger<ProcessExecutionService>? logger = null)
     {
+        _options = options.Value;
         _folderHandler = folderHandler;
         _fileReader = fileReader;
         _logger = logger ?? NullLogger<ProcessExecutionService>.Instance;
@@ -22,7 +25,7 @@ public sealed class ProcessExecutionService : IProcessExecutionService
         try
         {
             var tasks = new List<Task>();
-            foreach (var filePath in _folderHandler.GetFilesFromFolder())
+            foreach (var filePath in _folderHandler.GetFilesFromFolder(_options))
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -37,7 +40,7 @@ public sealed class ProcessExecutionService : IProcessExecutionService
         {
             _logger.LogDebug("Folder handler cancelled");
         }
-        catch (Exception ex)
+        catch (AggregateException ex)
         {
             _logger.LogError(ex, "Folder handler failed to process all files.");
         }

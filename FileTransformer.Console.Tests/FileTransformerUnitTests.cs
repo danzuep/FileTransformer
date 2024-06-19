@@ -2,7 +2,6 @@ using System.IO.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 namespace FileTransformer.Tests
 {
@@ -13,6 +12,7 @@ namespace FileTransformer.Tests
         private static readonly string _fileContent = """{"key":"value"}""";
 
         private readonly MockFileSystem _fileSystem;
+        private readonly FolderOptions _folderOptions;
         private readonly IHost _host;
 
         /// <summary>
@@ -25,6 +25,7 @@ namespace FileTransformer.Tests
             {
                 { _filePath, new MockFileData(_fileContent) }
             });
+            _folderOptions = FolderOptions.Folder(_folder);
             _host = CreateTestHost("-f", _folder);
         }
 
@@ -55,7 +56,7 @@ namespace FileTransformer.Tests
             var host = CreateTestHost(_folder);
             var folderHandler = host.Services.GetRequiredService<IFolderHandler>();
             // Act
-            var filePaths = folderHandler.GetFilesFromFolder();
+            var filePaths = folderHandler.GetFilesFromFolder(_folderOptions);
             // Assert
             Assert.True(filePaths?.Count() > 0);
             Assert.Equal(_filePath, filePaths.First());
@@ -67,7 +68,7 @@ namespace FileTransformer.Tests
             // Arrange
             var folderHandler = _host.Services.GetRequiredService<IFolderHandler>();
             // Act
-            var filePaths = folderHandler.GetFilesFromFolder();
+            var filePaths = folderHandler.GetFilesFromFolder(_folderOptions);
             // Assert
             Assert.True(filePaths?.Count() > 0);
             Assert.Equal(_filePath, filePaths.First());
@@ -80,10 +81,9 @@ namespace FileTransformer.Tests
             // Arrange
             var newFilePath = _fileSystem.Path.Combine(_folder, newFileName);
             _fileSystem.AddFile(newFilePath, new MockFileData(_fileContent));
-            var options = Options.Create(new WorkerOptions() { FolderPath = _folder} );
-            var folderHandler = new FolderHandler(options, _fileSystem);
+            var folderHandler = new FolderHandler(_fileSystem);
             // Act
-            var filePaths = folderHandler.GetFilesFromFolder();
+            var filePaths = folderHandler.GetFilesFromFolder(_folderOptions);
             // Assert
             Assert.Contains(newFilePath, filePaths);
         }

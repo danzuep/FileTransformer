@@ -2,5 +2,5 @@
 
 public interface IFolderHandler
 {
-    IEnumerable<string> GetFilesFromFolder();
+    IEnumerable<string> GetFilesFromFolder(FolderOptions options);
 }

@@ -2,17 +2,12 @@
 
 using System.IO.Abstractions;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 public sealed class FileWriter
 {
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
-    {
-        Converters = { new JsonStringEnumConverter() }
-    };
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
@@ -23,7 +18,7 @@ public sealed class FileWriter
     }
 
     public string Serialize<T>(T fileObject) =>
-        JsonSerializer.Serialize(fileObject, _jsonSerializerOptions);
+        JsonSerializer.Serialize(fileObject, FileReader.JsonSerializerOptions);
 
     public async Task WriteAllTextAsync<T>(T fileObject, string filePath, CancellationToken cancellationToken = default)
     {

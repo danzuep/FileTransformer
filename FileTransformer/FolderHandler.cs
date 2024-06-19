@@ -2,7 +2,6 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using System.IO.Abstractions;
 using System.Text;
 
@@ -10,25 +9,23 @@ public class FolderHandler : IFolderHandler
 {
     private const int MaxFilePathLength = 260;
 
-    private readonly WorkerOptions _options;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger = NullLogger.Instance;
 
-    public FolderHandler(IOptions<WorkerOptions> options, IFileSystem? fileSystem = null, ILogger<FolderHandler>? logger = null) : base()
+    public FolderHandler(IFileSystem? fileSystem = null, ILogger<FolderHandler>? logger = null) : base()
     {
-        _options = options.Value;
         _fileSystem = fileSystem ?? new FileSystem();
         if (logger != null) _logger = logger;
     }
 
-    public IEnumerable<string> GetFilesFromFolder()
+    public IEnumerable<string> GetFilesFromFolder(FolderOptions options)
     {
-        if (string.IsNullOrWhiteSpace(_options.FolderPath) ||
-            !CheckDirectory(_options.FolderPath, _options.CreateDirectory))
+        if (string.IsNullOrWhiteSpace(options.FolderPath) ||
+            !CheckDirectory(options.FolderPath, options.CreateDirectory))
             return Enumerable.Empty<string>();
-        var extension = ConvertToFileExtensionFilter(_options.Extension);
-        var option = _options.SearchAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var filePaths = _fileSystem.Directory.EnumerateFiles(_options.FolderPath, extension, option);
+        var extension = ConvertToFileExtensionFilter(options.Extension);
+        var option = options.SearchAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var filePaths = _fileSystem.Directory.EnumerateFiles(options.FolderPath, extension, option);
         return filePaths;
     }
 
