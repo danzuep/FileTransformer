@@ -1,4 +1,5 @@
 using System.IO.Abstractions;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,7 +45,6 @@ namespace FileTransformer.Tests
             {
                 services.Configure<WorkerOptions>(context.Configuration);
                 services.AddSingleton<IFileSystem>(_fileSystem);
-                services.AddTransient<FileWriter>();
                 services.AddFileTransformerServices(args);
             }
         }
@@ -103,13 +103,15 @@ namespace FileTransformer.Tests
         public async Task DeserializeAsync_WithValidContents_ReturnsValidModel()
         {
             // Arrange
-            var fileReader = _host.Services.GetRequiredService<IFileReader>();
-            var fileWriter = _host.Services.GetRequiredService<FileWriter>();
+            var fileReader = new FileReader(_fileSystem);
+            var fileWriter = _host.Services.GetRequiredService<IFileWriter>();
+            var jsonOptions = new JsonSerializerOptions(FileReader.JsonOptions) { WriteIndented = false };
             // Act
-            var fileContents = await fileReader.DeserializeAsync<Dictionary<string, string>>(_filePath, CancellationToken.None);
-            var fileContent = fileWriter.Serialize(fileContents);
+            var fileContents = await fileReader.DeserializeAsync<Dictionary<string, string>>(_filePath, jsonOptions, CancellationToken.None);
+            var isComplete = await fileWriter.WriteAsync(_filePath, fileContents, jsonOptions, CancellationToken.None);
+            var fileContent = await fileReader.ReadAllTextAsync(_filePath, CancellationToken.None);
             // Assert
-            Assert.NotNull(fileContent);
+            Assert.True(isComplete);
             Assert.Equal(_fileContent, fileContent);
         }
 

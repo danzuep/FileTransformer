@@ -2,7 +2,7 @@
 
 public class FolderOptions
 {
-    public string FolderPath { get; set; } = null!;
+    public required string FolderPath { get; set; } = null!;
 
     public string Extension { get; set; } = "*";
 

@@ -51,7 +51,7 @@ public sealed class ProcessExecutionService : IProcessExecutionService
         try
         {
             _logger.LogDebug("Deserializing file: \"{0}\"", filePath);
-            var content = await _fileReader.DeserializeAsync<Dictionary<string, string>>(filePath, cancellationToken).ConfigureAwait(false);
+            var content = await _fileReader.DeserializeAsync<Dictionary<string, string>>(filePath, null, cancellationToken).ConfigureAwait(false);
             if (content != null)
             {
                 foreach (var pair in content)

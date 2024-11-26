@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
         }
         services.AddTransient<IFolderHandler, FolderHandler>();
         services.AddTransient<IFileReader, FileReader>();
+        services.AddTransient<IFileWriter, FileWriter>();
         services.AddTransient<IProcessExecutionService, ProcessExecutionService>();
         return services;
     }
