@@ -166,7 +166,7 @@ namespace FileTransformer.Tests
 
         private static async Task ProcessAsync(Type type, int index = 0)
         {
-            var instance = Activator.CreateInstance(type) as IExecuteNextFile;
+            var instance = Activator.CreateInstance(type) as IExecuteNextHandler;
             var cancellationToken = TestContext.Current.CancellationToken;
             if (instance is null) { return; }
             await instance.ExecuteAsync("appsettings.json", cancellationToken).ConfigureAwait(false);

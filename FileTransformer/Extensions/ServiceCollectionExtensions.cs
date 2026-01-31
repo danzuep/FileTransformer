@@ -28,8 +28,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IExecuteService, FolderHandlerService>();
         services.AddScoped<IFileHandler, FileHandlerFactory>();
         // Register file handlers in the order they should be executed
-        services.AddScoped<IExecuteNextFile, JsonValidationHandler>();
-        services.AddScoped<IExecuteNextFile, JsonFileReaderHandler>();
+        services.AddScoped<IExecuteNextHandler, JsonValidationHandler>();
+        services.AddScoped<IExecuteNextHandler, JsonFileReaderHandler>();
         return services;
     }
 

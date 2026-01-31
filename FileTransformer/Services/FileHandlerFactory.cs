@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 public sealed class FileHandlerFactory : IFileHandler
 {
-    private readonly IExecuteNextFile _handler;
+    private readonly IExecuteNextHandler _handler;
     private readonly ILogger<FileHandlerFactory>? _logger;
 
-    public FileHandlerFactory(IEnumerable<IExecuteNextFile> handlers, ILogger<FileHandlerFactory>? logger = null)
+    public FileHandlerFactory(IEnumerable<IExecuteNextHandler> handlers, ILogger<FileHandlerFactory>? logger = null)
     {
         _logger = logger ?? NullLogger<FileHandlerFactory>.Instance;
         if (handlers == null)

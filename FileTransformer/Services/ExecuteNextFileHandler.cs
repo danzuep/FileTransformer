@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 // Handler that implements the Chain of Responsibility design pattern
-public abstract class ExecuteNextFileHandler : IExecuteNextFile
+public abstract class ExecuteNextFileHandler : IExecuteNextHandler
 {
-    private IExecuteNextFile? _next;
+    private IExecuteNextHandler? _next;
     protected readonly ILogger _logger;
 
     protected ExecuteNextFileHandler(ILogger? logger = null)
@@ -13,7 +13,7 @@ public abstract class ExecuteNextFileHandler : IExecuteNextFile
         _logger = logger ?? NullLogger.Instance;
     }
 
-    public IExecuteNextFile SetNext(IExecuteNextFile handler)
+    public IExecuteNextHandler SetNext(IExecuteNextHandler handler)
     {
         _next = handler ?? throw new ArgumentNullException(nameof(handler));
         return handler;
