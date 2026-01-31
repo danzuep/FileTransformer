@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Text.Json;
 using FileTransformer.Abstractions;
@@ -80,12 +81,13 @@ namespace FileTransformer.Tests
 
         [Theory]
         [InlineData("export.json")]
+        [Conditional("DEBUG")]
         public void GetFilesFromFolder_WithNewFile_ReturnsValidModel(string newFileName)
         {
             // Arrange
             var newFilePath = _mockFileSystem.Path.Combine(_folder, newFileName);
             _mockFileSystem.AddFile(newFilePath, new MockFileData(_fileContent));
-            var folderHandler = new Modules.FolderHandler(_mockFileSystem);
+            var folderHandler = new FolderHandler(_mockFileSystem);
             // Act
             var filePaths = folderHandler.GetFilesFromFolder(_folderOptions);
             // Assert
@@ -97,8 +99,9 @@ namespace FileTransformer.Tests
         {
             // Arrange
             var fileReader = new FileReader(_mockFileSystem);
+            var cancellationToken = TestContext.Current.CancellationToken;
             // Act
-            var fileContent = await fileReader.ReadAllTextAsync(_filePath, CancellationToken.None);
+            var fileContent = await fileReader.ReadAllTextAsync(_filePath, cancellationToken);
             // Assert
             Assert.Equal(_fileContent, fileContent);
         }
@@ -110,10 +113,11 @@ namespace FileTransformer.Tests
             var fileReader = new FileReader(_mockFileSystem);
             var fileWriter = _host.Services.GetRequiredService<IFileWriter>();
             fileWriter.JsonOptions = new JsonSerializerOptions(FileReader.DefaultJsonOptions) { WriteIndented = false };
+            var cancellationToken = TestContext.Current.CancellationToken;
             // Act
-            var fileContents = await fileReader.DeserializeAsync<Dictionary<string, string>>(_filePath, CancellationToken.None);
-            var isComplete = await fileWriter.TryWriteAsync(_filePath, fileContents, CancellationToken.None);
-            var fileContent = await fileReader.ReadAllTextAsync(_filePath, CancellationToken.None);
+            var fileContents = await fileReader.DeserializeAsync<Dictionary<string, string>>(_filePath, cancellationToken);
+            var isComplete = await fileWriter.TryWriteAsync(_filePath, fileContents, cancellationToken);
+            var fileContent = await fileReader.ReadAllTextAsync(_filePath, cancellationToken);
             // Assert
             Assert.True(isComplete);
             Assert.Equal(_fileContent, fileContent);
@@ -124,8 +128,49 @@ namespace FileTransformer.Tests
         {
             // Arrange
             var service = _host.Services.GetRequiredService<IExecuteService>();
+            var cancellationToken = TestContext.Current.CancellationToken;
             // Act
-            await service.ExecuteAsync(CancellationToken.None);
+            await service.ExecuteAsync(cancellationToken);
+        }
+
+        [Fact(Explicit = true)]
+        public async Task GetChildTypes_WithBaseType_ReturnsValidModel()
+        {
+            // Arrange
+            var baseType = typeof(ExecuteNextFileHandler);
+            // Act
+            var childTypes = GetChildTypes(baseType);
+            var tasks = childTypes.Select(ProcessAsync);
+            await Task.WhenAll(tasks);
+            // Assert
+            Assert.True(childTypes.Count > 0);
+            foreach (var type in childTypes)
+            {
+                Assert.True(baseType.IsAssignableFrom(type));
+            }
+        }
+
+        private static IReadOnlyList<Type> GetChildTypes(Type baseType)
+        {
+            var types = baseType.Assembly
+                .GetTypes()
+                .Where(t => baseType.IsAssignableFrom(t) &&
+                    t != baseType &&
+                    !t.IsAbstract &&
+                    !t.IsGenericTypeDefinition &&
+                    t.GetConstructor(Type.EmptyTypes) != null)
+                .OrderBy(t => t.Name)
+                .ToArray();
+            return types;
+        }
+
+        private static async Task ProcessAsync(Type type, int index = 0)
+        {
+            var instance = Activator.CreateInstance(type) as IExecuteNextFile;
+            var cancellationToken = TestContext.Current.CancellationToken;
+            if (instance is null) { return; }
+            await instance.ExecuteAsync("appsettings.json", cancellationToken).ConfigureAwait(false);
+            TestContext.Current.SendDiagnosticMessage("TestCase #{0:D2} run: {1}", index, type.Name);
         }
 
         public void Dispose()

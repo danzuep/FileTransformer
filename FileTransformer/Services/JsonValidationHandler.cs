@@ -5,7 +5,12 @@ namespace FileTransformer.Services;
 public class JsonValidationHandler : ExecuteNextFileHandler
 {
     private static readonly string _validPattern = "json";
-    public JsonValidationHandler(ILogger<JsonValidationHandler>? logger = null) : base(logger)
+
+    public JsonValidationHandler() : base(null)
+    {
+    }
+
+    public JsonValidationHandler(ILogger<JsonValidationHandler> logger) : base(logger)
     {
     }
 
