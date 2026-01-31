@@ -1,7 +1,9 @@
 ﻿namespace FileTransformer.Console;
 
 using System.Diagnostics.CodeAnalysis;
-using System.IO.Abstractions;
+using FileTransformer.Extensions;
+using FileTransformer.Models;
+using FileTransformer.Modules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,7 +21,7 @@ public sealed class Program
     public static IHost CreateConsoleHost(params string[] args)
     {
         return Host.CreateDefaultBuilder()
-            .ConfigureLogging(log => log.SetMinimumLevel(LogLevel.Debug))
+            .ConfigureLogging(log => log.SetMinimumLevel(LogLevel.Information))
             .ConfigureServices(InitialiseServices)
             .ConfigureAppConfiguration(InitialiseConfiguration)
             .UseConsoleLifetime()
@@ -31,9 +33,8 @@ public sealed class Program
 
         void InitialiseServices(HostBuilderContext context, IServiceCollection services)
         {
-            //var configuration = context.Configuration.GetSection(WorkerOptions.SectionName);
-            services.Configure<WorkerOptions>(context.Configuration);
-            services.AddTransient<IFileSystem, FileSystem>();
+            var configuration = context.Configuration.GetSection(FolderOptions.SectionName);
+            services.Configure<FolderOptions>(configuration);
             services.AddFileTransformerServices(args);
             services.AddHostedService<Worker>();
         }

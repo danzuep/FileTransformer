@@ -1,9 +1,10 @@
-﻿namespace FileTransformer;
+﻿namespace FileTransformer.Modules;
 
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
+using FileTransformer.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,11 +13,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 public class Worker : IHostedService, IDisposable
 {
     private CancellationTokenSource? _cancellationTokenSource = null;
-    private readonly IProcessExecutionService _processExecutionService;
+    private readonly IExecuteService _processExecutionService;
     private readonly IHostApplicationLifetime? _hostApplicationLifetime;
     private readonly ILogger _logger;
 
-    public Worker(IProcessExecutionService processExecutionService, IHostApplicationLifetime? hostApplicationLifetime = null, ILogger<Worker>? logger = null)
+    public Worker(IExecuteService processExecutionService, IHostApplicationLifetime? hostApplicationLifetime = null, ILogger<Worker>? logger = null)
     {
         _processExecutionService = processExecutionService;
         _hostApplicationLifetime = hostApplicationLifetime;
@@ -34,7 +35,7 @@ public class Worker : IHostedService, IDisposable
 
     public Task StopAsync(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Worker finished at {time:s}", DateTimeOffset.Now);
+        _logger.LogInformation("Worker finished at {time:o}", DateTimeOffset.Now);
         _hostApplicationLifetime?.StopApplication();
         return Task.CompletedTask;
     }

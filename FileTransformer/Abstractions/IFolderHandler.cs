@@ -1,4 +1,6 @@
-﻿namespace FileTransformer;
+﻿using FileTransformer.Models;
+
+namespace FileTransformer.Abstractions;
 
 public interface IFolderHandler
 {

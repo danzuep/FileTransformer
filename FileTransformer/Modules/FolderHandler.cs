@@ -1,5 +1,7 @@
-﻿namespace FileTransformer;
+﻿namespace FileTransformer.Modules;
 
+using FileTransformer.Abstractions;
+using FileTransformer.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.IO.Abstractions;
@@ -20,25 +22,28 @@ public class FolderHandler : IFolderHandler
 
     public IEnumerable<string> GetFilesFromFolder(FolderOptions options)
     {
-        if (string.IsNullOrWhiteSpace(options.FolderPath) ||
-            !CheckDirectory(options.FolderPath, options.CreateDirectory))
+        if (string.IsNullOrWhiteSpace(options.ReadDirectory) ||
+            !CheckDirectory(options.ReadDirectory, options.CreateDirectory))
             return Enumerable.Empty<string>();
-        var extension = ConvertToFileExtensionFilter(options.Extension);
-        var option = options.SearchAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var filePaths = _fileSystem.Directory.EnumerateFiles(options.FolderPath, extension, option);
+        var split = options.SearchPattern?.Split([','], StringSplitOptions.RemoveEmptyEntries)
+            .Select(ConvertToFileExtensionFilter);
+        var extension = string.Join(",", split ?? ["*"]);
+        var option = options.SearchTopDirectoryOnly ? SearchOption.TopDirectoryOnly : SearchOption.AllDirectories;
+        var filePaths = _fileSystem.Directory.EnumerateFiles(options.ReadDirectory, extension, option);
         return filePaths;
     }
 
     private static string ConvertToFileExtensionFilter(string fileExtension)
     {
         var sb = new StringBuilder();
-        if (string.IsNullOrEmpty(fileExtension))
+        if (string.IsNullOrWhiteSpace(fileExtension))
             fileExtension = "*";
         else if (fileExtension.StartsWith("."))
             sb.Append("*");
-        else if (!fileExtension.StartsWith("*."))
+        else if (!fileExtension.StartsWith("*.") &&
+            !fileExtension.Contains("."))
             sb.Append("*.");
-        sb.Append(fileExtension);
+        sb.Append(fileExtension.Trim());
         return sb.ToString();
     }
 
@@ -75,7 +80,7 @@ public class FolderHandler : IFolderHandler
             count = 1;
         if (count > 32)
             count = 32;
-        var uuid = Guid.NewGuid().ToString("n", null)[..count];
+        var uuid = Guid.NewGuid().ToString("n", null).Substring(0, count);
         return uuid;
     }
 
@@ -83,13 +88,13 @@ public class FolderHandler : IFolderHandler
     {
         if (string.IsNullOrEmpty(filePath))
             return string.Empty;
-        var outputPath = filePath;
+        var outputPath = filePath!;
         var folder = _fileSystem.Path.GetDirectoryName(filePath);
         if (folder != null && (_fileSystem.File.Exists(outputPath) || !string.IsNullOrEmpty(suffix)))
         {
-            string name = _fileSystem.Path.GetFileNameWithoutExtension(filePath);
-            string extension = _fileSystem.Path.GetExtension(filePath);
-            bool hasSubFolder = !string.IsNullOrEmpty(subFolder);
+            var name = _fileSystem.Path.GetFileNameWithoutExtension(filePath)!;
+            var extension = _fileSystem.Path.GetExtension(filePath);
+            var hasSubFolder = !string.IsNullOrEmpty(subFolder);
             var fileName = $"{name}{suffix}{extension}";
             if (hasSubFolder && !folder.EndsWith(subFolder, StringComparison.OrdinalIgnoreCase))
                 folder = _fileSystem.Path.Combine(folder, subFolder);
